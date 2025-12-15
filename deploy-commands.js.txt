@@ -1,0 +1,32 @@
+import { REST, Routes } from "discord.js";
+import fs from "fs";
+
+const commands = [];
+
+// Carregar comandos
+const commandFiles = fs.readdirSync("./src/commands");
+for (const file of commandFiles) {
+  const command = await import(`./src/commands/${file}`);
+  commands.push(command.data.toJSON());
+}
+
+// REST
+const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+
+// 👉 COLOQUE SEUS IDS AQUI
+const CLIENT_ID = "1450102573519343719";
+const GUILD_ID  = "1413567197317435404"; 
+
+(async () => {
+  try {
+    console.log("⏳ Registrando comandos...");
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commands }
+    );
+    console.log("✅ Comandos registrados com sucesso!");
+  } catch (error) {
+    console.error("❌ Erro ao registrar comandos:", error);
+  }
+})();
+1413567197317435404
