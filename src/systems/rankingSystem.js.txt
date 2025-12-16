@@ -1,0 +1,16 @@
+export class RankingSystem {
+  constructor() {
+    this.recrutadores = new Map();
+  }
+
+  registrar(recrutador) {
+    const atual = this.recrutadores.get(recrutador) || 0;
+    this.recrutadores.set(recrutador, atual + 1);
+  }
+
+  top(limite = 10) {
+    return [...this.recrutadores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limite);
+  }
+}
