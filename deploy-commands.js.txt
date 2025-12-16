@@ -1,32 +1,39 @@
-import { REST, Routes } from "discord.js";
+import { Client, GatewayIntentBits } from "discord.js";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const commands = [];
+import { ActionSystem } from "./src/systems/actionSystem.js";
+import { RankingSystem } from "./src/systems/rankingSystem.js";
+import Logger from "./src/systems/logger.js";
 
-// Carregar comandos
-const commandFiles = fs.readdirSync("./src/commands");
-for (const file of commandFiles) {
-  const command = await import(`./src/commands/${file}`);
-  commands.push(command.data.toJSON());
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ===== CLIENTE =====
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages
+  ]
+});
+
+// ===== SISTEMAS =====
+client.acoes = new ActionSystem();
+client.ranking = new RankingSystem();
+client.logger = new Logger(client);
+
+// ===== EVENTOS =====
+const eventsPath = path.join(__dirname, "src", "events");
+for (const file of fs.readdirSync(eventsPath)) {
+  const event = await import(`./src/events/${file}`);
+  client.on(event.name, (...args) => event.execute(...args, client));
 }
 
-// REST
-const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+// ===== LOGIN =====
+client.login(process.env.TOKEN);
 
-// 👉 COLOQUE SEUS IDS AQUI
-const CLIENT_ID = "1450102573519343719";
-const GUILD_ID  = "1413567197317435404"; 
-
-(async () => {
-  try {
-    console.log("⏳ Registrando comandos...");
-    await rest.put(
-      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-      { body: commands }
-    );
-    console.log("✅ Comandos registrados com sucesso!");
-  } catch (error) {
-    console.error("❌ Erro ao registrar comandos:", error);
-  }
-})();
-1413567197317435404
+client.once("ready", () => {
+  console.log(`✅ Bot online como ${client.user.tag}`);
+});

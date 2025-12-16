@@ -1,11 +1,16 @@
-
-import { Client, Collection, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits } from "discord.js";
 import fs from "fs";
-import setupErrorHandler from "./src/handlers/errorHandler.js";
-import Logger from "./src/systems/logger.js";
-import { TicketEliteSystem } from "./src/systems/ticketEliteSystem.js";
-import { AcoesSystem } from "./src/systems/acoesSystem.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
+import { ActionSystem } from "./src/systems/actionSystem.js";
+import { RankingSystem } from "./src/systems/rankingSystem.js";
+import Logger from "./src/systems/logger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ===== CLIENTE =====
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -14,23 +19,21 @@ const client = new Client({
   ]
 });
 
-setupErrorHandler();
-
+// ===== SISTEMAS =====
+client.acoes = new ActionSystem();
+client.ranking = new RankingSystem();
 client.logger = new Logger(client);
-client.tickets = new TicketEliteSystem(client);
-client.acoes = new AcoesSystem(client);
-client.commands = new Collection();
 
-for (const file of fs.readdirSync("./src/commands")) {
-  const command = await import(`./src/commands/${file}`);
-  client.commands.set(command.data.name, command);
-}
-
-for (const file of fs.readdirSync("./src/events")) {
+// ===== EVENTOS =====
+const eventsPath = path.join(__dirname, "src", "events");
+for (const file of fs.readdirSync(eventsPath)) {
   const event = await import(`./src/events/${file}`);
-  event.once
-    ? client.once(event.name, (...args) => event.execute(...args, client))
-    : client.on(event.name, (...args) => event.execute(...args, client));
+  client.on(event.name, (...args) => event.execute(...args, client));
 }
 
+// ===== LOGIN =====
 client.login(process.env.TOKEN);
+
+client.once("ready", () => {
+  console.log(`✅ Bot online como ${client.user.tag}`);
+});
